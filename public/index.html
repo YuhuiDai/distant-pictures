@@ -10,6 +10,16 @@
         <button onclick="ledON()">LED ON</button>
         <button onclick="ledOFF()">LED OFF</button>
         <button onclick="takePicture()">Take a picture</button>
+	<select id="instagram" onchange="selectChange(this)">
+ 	 <option value="normal" selected>No filter</option>
+ 	 <option value="amaro">Amaro</option>
+ 	 <option value="willow">Willow</option>
+   	 <option value="skyline">skyline</option>
+	 <option value="rise">Rise</option>
+         <option value="earlybird">Earlybird</option>
+         <option value="slumber">Slumber</option>
+	 <option value="dogpatch">Dogpatch</option>
+	</select>
       </br>
         <img src="" id= "pictureContainer" alt="WebCam image  made by the webserver">
         <script src="client.js"></script>

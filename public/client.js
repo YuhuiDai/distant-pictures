@@ -14,6 +14,12 @@ Usage: This file is called automatically when the webpage is served.
 // WebSocket connection setup
 var socket = io();
 
+//selection changes
+function selectChange(data) {
+    var msg = data.value;
+    socket.emit('selected',msg);
+}
+
 // send out LedOn message over socket
 function ledON() {
   socket.emit('ledON');

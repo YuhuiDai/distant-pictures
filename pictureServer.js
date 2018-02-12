@@ -24,11 +24,13 @@ var app = express(); // webapp
 var http = require('http').Server(app); // connects http library to server
 var io = require('socket.io')(http); // connect websocket library to server
 var serverPort = 8000;
+var fs = require('fs');
 var SerialPort = require('serialport'); // serial library
 var Readline = SerialPort.parsers.Readline; // read serial data as lines
+var filterous = require('filterous');
 //-- Addition:
 var NodeWebcam = require( "node-webcam" );// load the webcam module
-
+var filter_name = 'normal';
 //---------------------- WEBAPP SERVER SETUP ---------------------------------//
 // use express to create the simple webapp
 app.use(express.static('public')); // find pages in public directory
@@ -86,6 +88,10 @@ const parser = new Readline({
 // Read data that is available on the serial port and send it to the websocket
 serial.pipe(parser);
 parser.on('data', function(data) {
+  var imageName = new Date().toString().replace(/[&\/\\#,+()$~%.'":*?<>{}\s-]/g, '');
+    console.log('making a making a picture at'+ imageName); 
+    NodeWebcam.capture('public/'+imageName, opts, function( err, data ) {
+    io.emit('newPicture',(imageName+'.jpg'));}); 
   console.log('Data:', data);
   io.emit('server-msg', data);
 });
@@ -97,7 +103,10 @@ parser.on('data', function(data) {
 // as long as someone is connected, listen for messages
 io.on('connect', function(socket) {
   console.log('a user connected');
-
+  socket.on('selected', function(msg) {
+    console.log('selected with msg: '+msg);
+    filter_name = msg;
+  });
   // if you get the 'ledON' msg, send an 'H' to the Arduino
   socket.on('ledON', function() {
     console.log('ledON');
@@ -112,19 +121,7 @@ io.on('connect', function(socket) {
 
   //-- Addition: This function is called when the client clicks on the `Take a picture` button.
   socket.on('takePicture', function() {
-    /// First, we create a name for the new picture.
-    /// The .replace() function removes all special characters from the date.
-    /// This way we can use it as the filename.
-    var imageName = new Date().toString().replace(/[&\/\\#,+()$~%.'":*?<>{}\s-]/g, '');
-
-    console.log('making a making a picture at'+ imageName); // Second, the name is logged to the console.
-
-    //Third, the picture is  taken and saved to the `public/`` folder
-    NodeWebcam.capture('public/'+imageName, opts, function( err, data ) {
-    io.emit('newPicture',(imageName+'.jpg')); ///Lastly, the new name is send to the client web browser.
-    /// The browser will take this new name and load the picture from the public folder.
-  });
-
+    takePic(filter_name);
   });
   // if you get the 'disconnect' message, say the user disconnected
   socket.on('disconnect', function() {
@@ -132,3 +129,19 @@ io.on('connect', function(socket) {
   });
 });
 //----------------------------------------------------------------------------//
+function takePic(filter_name){
+    var imageName = new Date().toString().replace(/[&\/\\#,+()$~%.'":*?<>{}\s-]/g, '');
+    console.log('making a making a picture at'+ imageName);
+    NodeWebcam.capture('public/'+imageName, opts, function(err, data){console.log(data);      });
+    setTimeout(function(){
+    fs.readFile('public/'+imageName+'.jpg', (err, buffer) => {
+	if (err) throw err;
+         let f = filterous.importImage(buffer)
+                .applyInstaFilter(filter_name)
+                 .save('public/insta'+imageName+'.jpg');
+        });
+    }, 1000);
+   setTimeout(function(){
+	console.log('insta'+imageName+'.jpg');
+	io.emit('newPicture',('insta'+imageName+'.jpg'));},2000);
+}
